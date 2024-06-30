@@ -1,0 +1,136 @@
+name: Backup
+on:
+  schedule:
+    - cron: "4 23 * * 0"
+  push:
+    branches:
+      - main
+
+jobs:
+  Update:
+    name: Update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+         token: '${{ github.token }}'
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 0
+
+      - name: Update
+        run: |
+          rm -fr * .git .github
+          clash_version=$(curl -sL https://cdn.jsdelivr.net/gh/zzzgydi/clash-verge@main/package.json | jq -r .version)
+          wget -qO ./clash.zip https://github.com/zzzgydi/clash-verge/releases/download/v$clash_version/Clash.Verge_${clash_version}_x64_portable.zip
+          check_sha256=$(sha256sum ./clash.zip | cut -d " " -f1 )
+          echo Clash Verge $check_sha256
+          echo ====================
+
+          rm -f ./clash.zip
+
+          mkdir -p ./clash/tools
+
+          #chocolateyinstall.ps1
+
+          cat <<EOF > ./clash/tools/chocolateyinstall.ps1
+          \$ErrorActionPreference = 'Stop';
+
+          if (Test-Connection -ComputerName google.com -Quiet -Count 1) {
+            \$url64 = 'https://github.com/zzzgydi/clash-verge/releases/download/v$clash_version/Clash.Verge_${clash_version}_x64_portable.zip'
+          }
+          else {
+            \$url64 = 'https://mirror.ghproxy.com/https://github.com/zzzgydi/clash-verge/releases/download/v$clash_version/Clash.Verge_${clash_version}_x64_portable.zip'
+          }
+
+
+          \$sha256 = "$check_sha256"
+
+          \$DesktopPath = [Environment]::GetFolderPath("Desktop")
+
+
+          \$packageArgs = @{
+            packageName    = \$env:ChocolateyPackageName
+            unzipLocation  = "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName"
+            url64          = \$url64
+            checksum64     = \$sha256
+            checksumType64 = 'sha256'
+          }
+
+          Install-ChocolateyZipPackage @packageArgs
+          Install-ChocolateyShortcut -ShortcutFilePath "\$DesktopPath\Clash Verge.lnk" -TargetPath "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName\Clash Verge.exe"
+          New-Item -ItemType File -Force -Path "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName\.config\PORTABLE"
+          EOF
+
+          cat ./clash/tools/chocolateyinstall.ps1
+
+          #chocolateyUninstall.ps1
+          cat <<EOF > ./clash/tools/chocolateyUninstall.ps1
+          \$ErrorActionPreference = 'Stop'
+          \$DesktopPath = [Environment]::GetFolderPath("Desktop")
+          Remove-Item -Recurse "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName"  -Force
+          Remove-Item "\$DesktopPath\Clash Verge.lnk"
+          EOF
+
+          cat ./clash/tools/chocolateyUninstall.ps1
+
+          #2rayn.nuspec
+          cat <<EOF > ./clash/clash.nuspec
+          <?xml version="1.0" encoding="utf-8"?>
+          <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+            <metadata>
+              <id>clash</id>
+              <version>$clash_version</version>
+              <owners>Mainians</owners>
+              <title>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</title>
+              <authors>clash-verge AUTHORS</authors>
+              <licenseUrl>https://github.com/zzzgydi/clash-verge/blob/main/LICENSE</licenseUrl>
+              <projectUrl>https://github.com/zzzgydi/clash-verge</projectUrl>
+              <iconUrl>https://cdn.jsdelivr.net/gh/zzzgydi/clash-verge@main/src/assets/image/logo.png</iconUrl>
+              <requireLicenseAcceptance>false</requireLicenseAcceptance>
+              <projectSourceUrl>https://github.com/zzzgydi/clash-verge/</projectSourceUrl>
+              <docsUrl>https://github.com/zzzgydi/clash-verge/wiki</docsUrl>
+              <mailingListUrl>https://github.com/zzzgydi/clash-verge/discussions</mailingListUrl>
+              <bugTrackerUrl>https://github.com/zzzgydi/clash-verge/issues</bugTrackerUrl>
+              <tags>Clash Verge</tags>
+              <summary>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</summary>
+              <description>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</description>
+              <releaseNotes>https://github.com/zzzgydi/clash-verge/releases</releaseNotes>
+              <packageSourceUrl>https://github.com/mainians/Choco-Clash</packageSourceUrl>
+            </metadata>
+            <files>
+              <file src="tools\**" target="tools" />
+            </files>
+          </package>
+          EOF
+
+          cat ./clash/clash.nuspec
+
+          mkdir -p .github/workflows
+          wget -qO .github/workflows/update.yaml https://github.com/${{ github.repository }}/raw/main/.github/workflows/update.yaml &> /dev/null
+
+          git config --global init.defaultBranch main
+          git init
+          git add .
+          git config user.name "mainians"
+          git config user.email "61817665+mainians@users.noreply.github.com"
+          git commit -m "$clash_version"
+          git remote add release "https://${{github.actor}}:${{secrets.GITHUB_TOKEN}}@github.com/${{github.repository}}"
+          git push -u release main -f
+  Cpack:
+    name: Cpack
+    needs: Update
+    runs-on: windows-latest
+    steps:
+      - name: Cpack
+        run: |
+          git clone https://github.com/${{github.repository}} Clash
+          cd Clash/Clash
+          choco apikey --key ${{secrets.api_key}} --source https://push.chocolatey.org/
+          choco pack
+          choco push --source https://push.chocolatey.org/ || true

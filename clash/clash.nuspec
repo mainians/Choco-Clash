@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>clash</id>
+    <version>1.3.8</version>
+    <owners>Mainians</owners>
+    <title>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</title>
+    <authors>clash-verge AUTHORS</authors>
+    <licenseUrl>https://github.com/zzzgydi/clash-verge/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/zzzgydi/clash-verge</projectUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/zzzgydi/clash-verge@main/src/assets/image/logo.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/zzzgydi/clash-verge/</projectSourceUrl>
+    <docsUrl>https://github.com/zzzgydi/clash-verge/wiki</docsUrl>
+    <mailingListUrl>https://github.com/zzzgydi/clash-verge/discussions</mailingListUrl>
+    <bugTrackerUrl>https://github.com/zzzgydi/clash-verge/issues</bugTrackerUrl>
+    <tags>Clash Verge</tags>
+    <summary>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</summary>
+    <description>A Clash GUI based on tauri. Supports Windows, macOS and Linux.</description>
+    <releaseNotes>https://github.com/zzzgydi/clash-verge/releases</releaseNotes>
+    <packageSourceUrl>https://github.com/mainians/Choco-Clash</packageSourceUrl>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
